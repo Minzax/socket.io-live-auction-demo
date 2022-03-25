@@ -9,7 +9,7 @@ $(function() {
 
   var username = 'Tim';
   var connected = false;
-  var socket = io.connect('http://localhost:3000');
+  var socket = io.connect('/');
   var minPrice = 99;
   var timeLeft = 0;
   var timer = null;
