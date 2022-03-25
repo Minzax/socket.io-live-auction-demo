@@ -3,7 +3,7 @@ var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
-var port = process.env.PORT || 8080;
+var port = process.env.PORT || 3000;
 Timer = require('./timer.js').Timer,
 timer = new Timer();
 
@@ -17,25 +17,28 @@ app.use(express.static(__dirname + '/public'));
 // Chatroom
 
 var numUsers = 0;
+var timeLeft = 0;
+var timer = null;
+var maxPrice = 0;
+var maxUsername = '';
 
 io.on('connection', function (socket) {
   var addedUser = false;
 
-  //added later [sset timer for buyers]
-  socket.emit('currentEndTime', {time: timer.getEndTime() });
-  
-  socket.on('setTimer', function(data) {
-    timer.setEndTime(data.time);
-    socket.broadcast.emit('currentEndTime', {time: timer.getEndTime() });
-  });
-
-  // when the client emits 'new message', this listens and executes
-  socket.on('new message', function (data) {
-    // we tell the client to execute 'new message'
-    socket.broadcast.emit('new message', {
-      username: socket.username,
-      message: data
-    });
+  socket.on('setPrice', function(data) {
+    const price = data.price;
+    if(price > maxPrice) {
+      maxPrice = price;
+      maxUsername = socket.username;
+      socket.emit('priceChange', {
+        price: maxPrice,
+        username: socket.username,
+      })
+      socket.broadcast.emit('priceChange', {
+        price: maxPrice,
+        username: socket.username,
+      })
+    }
   });
 
   // when the client emits 'add user', this listens and executes
@@ -46,27 +49,31 @@ io.on('connection', function (socket) {
     socket.username = username;
     ++numUsers;
     addedUser = true;
+
+    if(timeLeft <= 0 && !timer) {
+      timeLeft = 60;
+      maxPrice = 1;
+      timer = setInterval(() => {
+        if(timeLeft <= 0) {
+          clearInterval(timer);
+          timer = null;
+          socket.emit('timeEnd', { price: maxPrice, username: maxUsername });
+          socket.broadcast.emit('timeEnd', { price: maxPrice, username: maxUsername });
+        }
+        timeLeft--;
+      }, 1000);
+    }
+
     socket.emit('login', {
-      numUsers: numUsers
+      numUsers: numUsers,
+      timeLeft: timeLeft,
+      price: maxPrice
     });
+
     // echo globally (all clients) that a person has connected
     socket.broadcast.emit('user joined', {
       username: socket.username,
       numUsers: numUsers
-    });
-  });
-
-  // when the client emits 'typing', we broadcast it to others
-  socket.on('typing', function () {
-    socket.broadcast.emit('typing', {
-      username: socket.username
-    });
-  });
-
-  // when the client emits 'stop typing', we broadcast it to others
-  socket.on('stop typing', function () {
-    socket.broadcast.emit('stop typing', {
-      username: socket.username
     });
   });
 
