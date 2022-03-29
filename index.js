@@ -27,15 +27,19 @@ io.on('connection', function (socket) {
 
   socket.on('setPrice', function(data) {
     const price = data.price;
+    timeLeft = 60;
+
     if(price > maxPrice) {
       maxPrice = price;
       maxUsername = socket.username;
       socket.emit('priceChange', {
         price: maxPrice,
+        timeLeft,
         username: socket.username,
       })
       socket.broadcast.emit('priceChange', {
         price: maxPrice,
+        timeLeft,
         username: socket.username,
       })
     }

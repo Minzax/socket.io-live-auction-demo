@@ -71,6 +71,11 @@ $(function() {
   socket.on('priceChange', function(data) {
     console.log('priceChange', data)
     const price = data.price
+
+    if(data.timeLeft) {
+      timeLeft = data.timeLeft
+    }
+
     if(price) {
       minPrice = price
       $minPrice.text(`$${price}`)
